@@ -1,0 +1,18 @@
+{% set rows = calls if calls is defined else recent_calls %}
+{% if rows %}
+<table>
+  <tr><th>#</th><th>Направление</th><th>Номер</th><th>Статус</th><th>Длительность</th><th>Цель</th><th>Начало</th><th></th></tr>
+  {% for call in rows %}
+  <tr>
+    <td>{{ call.id }}</td>
+    <td>{{ "исх." if call.direction.value == "outbound" else "вх." }}</td>
+    <td>{{ call.phone }}{% if call.contact and call.contact.name %} <span class="muted">{{ call.contact.name }}</span>{% endif %}</td>
+    <td><span class="badge {{ call.status.value }}">{{ call.status.value }}</span></td>
+    <td>{{ call.duration_seconds|duration }}</td>
+    <td>{% if call.goal_achieved %}<span class="ok">да</span>{% elif call.status.value == "completed" %}нет{% else %}–{% endif %}</td>
+    <td class="muted">{{ (call.started_at or call.created_at)|dt }}</td>
+    <td><a href="/calls/{{ call.id }}">транскрипт</a></td>
+  </tr>
+  {% endfor %}
+</table>
+{% else %}<p class="muted">Звонков пока нет.</p>{% endif %}

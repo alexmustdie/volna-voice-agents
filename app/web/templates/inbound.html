@@ -1,0 +1,33 @@
+{% extends "base.html" %}
+{% block title %}Входящие – Volna{% endblock %}
+{% block content %}
+<h1>Входящие звонки</h1>
+<div class="card">
+  <p class="muted">Привяжите арендованный номер Twilio к агенту. В консоли Twilio у номера укажите Voice webhook: <code>{{ settings.public_base_url }}/twilio/voice/inbound</code> (HTTP POST).</p>
+  {% if agents %}
+  <form method="post" action="/inbound">
+    <div class="row">
+      <div><label>Номер (E.164)</label><input type="text" name="phone" required placeholder="{{ settings.twilio_phone_number or '+12025550123' }}"></div>
+      <div><label>Агент</label><select name="agent_id">{% for a in agents %}<option value="{{ a.id }}">{{ a.name }}</option>{% endfor %}</select></div>
+    </div>
+    <button class="btn" style="margin-top:12px">Привязать</button>
+  </form>
+  {% else %}<p>Сначала создайте <a href="/agents/new">агента</a>.</p>{% endif %}
+</div>
+{% if numbers %}
+<table>
+  <tr><th>Номер</th><th>Агент</th><th></th></tr>
+  {% for n in numbers %}
+  <tr><td>{{ n.phone }}</td><td>{{ n.agent.name }}</td>
+    <td>
+      {% if settings.fake_calls %}
+      <form class="inline" method="post" action="/fake/inbound"><input type="hidden" name="to_phone" value="{{ n.phone }}"><input type="hidden" name="from_phone" value="+79990000001"><button class="btn small secondary">симулировать входящий</button></form>
+      {% endif %}
+      <form class="inline" method="post" action="/inbound/{{ n.id }}/delete"><button class="btn small danger">отвязать</button></form>
+    </td></tr>
+  {% endfor %}
+</table>
+{% endif %}
+<h2>Последние входящие</h2>
+{% with calls = inbound_calls %}{% include "_calls_table.html" %}{% endwith %}
+{% endblock %}

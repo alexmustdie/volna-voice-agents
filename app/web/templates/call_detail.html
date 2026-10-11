@@ -1,0 +1,50 @@
+{% extends "base.html" %}
+{% block title %}Звонок #{{ call.id }} – Volna{% endblock %}
+{% block content %}
+<h1>Звонок #{{ call.id }} <span class="badge {{ call.status.value }}">{{ call.status.value }}</span></h1>
+<div class="card">
+  <div class="row">
+    <div>
+      <div>{{ "Исходящий" if call.direction.value == "outbound" else "Входящий" }} · {{ call.phone }}{% if call.contact and call.contact.name %} ({{ call.contact.name }}){% endif %}</div>
+      <div>Агент: <a href="/agents/{{ call.agent.id }}">{{ call.agent.name }}</a>{% if call.campaign %} · Кампания: <a href="/campaigns/{{ call.campaign.id }}">{{ call.campaign.name }}</a>{% endif %}</div>
+      <div class="muted">Начало: {{ call.started_at|dt }} · Конец: {{ call.ended_at|dt }} · Длительность: {{ call.duration_seconds|duration }} · GPT-Live: {{ call.live_usage_seconds|round(1) }} с</div>
+      <div class="muted">Провайдер: {{ call.provider }} {{ call.provider_call_id or "" }} · Live-сессия: {{ call.live_session_id or "–" }}</div>
+    </div>
+    <div>
+      <div>Цель достигнута: {% if call.goal_achieved %}<span class="ok">да</span>{% else %}нет{% endif %}
+        <span class="muted">(встреча, прямой номер и мессенджер)</span></div>
+      {% if call.outcome %}<div><b>Исход:</b> {{ outcomes.get(call.outcome, call.outcome) }}</div>{% endif %}
+      {% if call.direct_phone or call.messenger %}<div><b>Прямой контакт:</b> {{ call.direct_phone or "номер не получен" }}{% if call.messenger %}, {{ call.messenger }}{% endif %}</div>{% endif %}
+      {% if call.callback_after or call.callback_reason %}<div><b>Перезвонить:</b> {{ call.callback_after or "срок не назван" }}{% if call.callback_reason %}. {{ call.callback_reason }}{% endif %}</div>{% endif %}
+      {% if call.do_not_call_requested %}<div class="badge do_not_call">клиент просил не звонить</div>{% endif %}
+      {% if call.outcome_summary %}<div><b>Итог:</b> {{ call.outcome_summary }}</div>{% endif %}
+      {% if call.error %}<div class="muted"><b>Ошибки:</b> {{ call.error }}</div>{% endif %}
+    </div>
+  </div>
+</div>
+
+{% if call.meetings %}
+<h2>Встречи</h2>
+<table><tr><th>Когда</th><th>Комментарий</th></tr>
+{% for m in call.meetings %}<tr><td>{{ m.scheduled_at|dt }}</td><td>{{ m.comment }}</td></tr>{% endfor %}
+</table>
+{% endif %}
+
+{% if call.utp_offer and call.utp_offer.values()|select|list %}
+<h2>Предложение (внешний сервис офферов)</h2>
+<table>
+  {% for key, value in call.utp_offer.items() if value %}
+  <tr><th style="width:220px">{{ key }}</th><td>{{ value }}</td></tr>
+  {% endfor %}
+</table>
+{% endif %}
+
+<h2>Транскрипт</h2>
+{% if call.transcript %}
+<div class="card transcript">
+  {% for seg in call.transcript %}
+  <div class="msg {{ seg.role }}"><div class="who">{{ "Агент" if seg.role == "agent" else "Клиент" }}{% if seg.start_ms is not none %} · {{ (seg.start_ms / 1000)|round(1) }}s{% endif %}</div>{{ seg.text }}</div>
+  {% endfor %}
+</div>
+{% else %}<p class="muted">Транскрипта нет.</p>{% endif %}
+{% endblock %}

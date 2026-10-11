@@ -1,0 +1,26 @@
+# Боевой compose: своего Postgres нет, DATABASE_URL в .env указывает на внешнюю базу.
+# Панель публикуется на PANEL_BIND (по умолчанию только localhost), наружу её отдаёт reverse proxy.
+name: volna
+
+services:
+  app:
+    build: .
+    image: volna:latest
+    container_name: volna-app-1
+    env_file: .env
+    ports:
+      - "${PANEL_BIND:-127.0.0.1:8011}:8000"
+    volumes:
+      - ./data:/data          # файлы кампаний и выгрузки; база живёт в Postgres
+    networks:
+      - volna
+    mem_limit: 400m
+    restart: unless-stopped
+    healthcheck:
+      test: ["CMD", "python", "-c", "import urllib.request; urllib.request.urlopen('http://127.0.0.1:8000/health')"]
+      interval: 60s
+      timeout: 5s
+      retries: 3
+
+networks:
+  volna:

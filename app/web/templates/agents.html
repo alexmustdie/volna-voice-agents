@@ -1,0 +1,24 @@
+{% extends "base.html" %}
+{% block title %}Агенты – Volna{% endblock %}
+{% block content %}
+<h1>Агенты <a class="btn" style="float:right" href="/agents/new">+ Новый агент</a></h1>
+{% if agents %}
+<table>
+  <tr><th>Имя</th><th>Персона</th><th>Голос</th><th>Ниша</th><th>Цель звонка</th><th></th></tr>
+  {% for a in agents %}
+  <tr>
+    <td><a href="/agents/{{ a.id }}">{{ a.name }}</a></td>
+    <td>{{ "муж." if a.gender.value == "male" else "жен." }}, ~{{ a.age }}</td>
+    <td>{{ a.voice }} <span class="muted">{{ engine_labels.get(a.engine, a.engine) }}, {{ voice_note(a.voice) }}</span>{% if voice_mismatch(a.gender.value, a.voice) %}<br><span class="badge do_not_call">не тот пол</span>{% endif %}</td>
+    <td>{{ a.niche }}</td>
+    <td>{{ a.call_goal[:80] }}</td>
+    <td>
+      <a class="btn small secondary" href="/agents/{{ a.id }}/prompt" target="_blank">промпт</a>
+      <a class="btn small secondary" href="/test">тест в браузере</a>
+      <form class="inline" method="post" action="/agents/{{ a.id }}/delete" onsubmit="return confirm('Удалить агента?')"><button class="btn small danger">удалить</button></form>
+    </td>
+  </tr>
+  {% endfor %}
+</table>
+{% else %}<p class="muted">Агентов пока нет.</p>{% endif %}
+{% endblock %}

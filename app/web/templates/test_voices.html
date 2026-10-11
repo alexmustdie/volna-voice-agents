@@ -1,0 +1,55 @@
+{% extends "base.html" %}
+{% block title %}Голоса GPT-Live-1 – Volna{% endblock %}
+{% block content %}
+<h1>Голоса GPT-Live-1</h1>
+<p class="muted">Одна и та же фраза, записанная с реальной модели 13.09.2026. "Базовый": промпт с манерой речи. "Носитель": в промпт добавлено, что говорящая выросла в Москве, с описанием русского произношения и интонации.</p>
+
+<h2>Как это услышит клиент в телефоне</h2>
+<p class="muted">Те же записи, пропущенные через приближённую модель телефонного канала: полоса 300–3400 Гц, 8 кГц, кодек G.711. В телефоне разница между голосами заметно меньше, чем в наушниках.</p>
+<table>
+  <tr><th>Вариант</th><th>Образец</th></tr>
+  {% for file, desc in phone %}
+  <tr><td>{{ desc }}</td><td><audio controls preload="none" src="/static/voices/{{ file }}.wav"></audio></td></tr>
+  {% endfor %}
+</table>
+
+<h2>Яндекс: амплуа, скорость и разговорный промпт</h2>
+<table>
+  <tr><th>Вариант</th><th>Образец</th></tr>
+  {% for file, desc in style %}
+  <tr><td>{{ desc }}</td><td><audio controls preload="none" src="/static/voices/{{ file }}.wav"></audio></td></tr>
+  {% endfor %}
+</table>
+
+<h2>Yandex AI Studio Realtime (родной русский)</h2>
+<p class="muted">Движок сейчас: <b>{{ engine }}</b>. Голос для агента выбирается в форме агента, список голосов подставляется по движку.</p>
+<table>
+  <tr><th>Голос</th><th>Образец</th></tr>
+  {% for v in yandex %}
+  <tr><td><b>{{ v }}</b> <span class="muted">{{ voice_note(v) }}</span></td><td><audio controls preload="none" src="/static/voices/ya_{{ v }}.wav"></audio></td></tr>
+  {% endfor %}
+</table>
+
+<h2>GPT-Live-1, bossa: варианты промпта против акцента</h2>
+<table>
+  <tr><th>Вариант</th><th>Образец</th></tr>
+  <tr><td>базовый промпт</td><td><audio controls preload="none" src="/static/voices/bossa.wav"></audio></td></tr>
+  {% for file, desc in bossa_variants %}
+  <tr><td>{{ desc }}</td><td><audio controls preload="none" src="/static/voices/{{ file }}.wav"></audio></td></tr>
+  {% endfor %}
+</table>
+
+<h2>GPT-Live-1, все голоса</h2>
+<table>
+  <tr><th>Голос</th><th>Пол, основной тон</th><th>Базовый промпт</th><th>Промпт "носитель языка"</th></tr>
+  {% for v in samples %}
+  <tr>
+    <td><b>{{ v.name }}</b>{% if v.name == "marin" %} <span class="muted">(по умолчанию)</span>{% endif %}</td>
+    <td>{{ voice_note(v.name) }}</td>
+    <td>{% if v.base %}<audio controls preload="none" src="/static/voices/{{ v.name }}.wav"></audio>{% else %}–{% endif %}</td>
+    <td>{% if v.native %}<audio controls preload="none" src="/static/voices/{{ v.name }}_native.wav"></audio>{% else %}–{% endif %}</td>
+  </tr>
+  {% endfor %}
+</table>
+<p style="margin-top:16px"><a class="btn secondary" href="/test">К тестовому звонку</a> <a class="btn secondary" href="/agents/1">К агенту</a></p>
+{% endblock %}

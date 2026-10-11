@@ -1,0 +1,44 @@
+{% extends "base.html" %}
+{% block title %}Кампания {{ campaign.name }} – Volna{% endblock %}
+{% block content %}
+<h1>Кампания: {{ campaign.name }} <span class="badge {{ campaign.status.value }}">{{ campaign.status.value }}</span></h1>
+<div class="card">
+  <div class="row">
+    <div>
+      <div>Агент: <a href="/agents/{{ campaign.agent.id }}">{{ campaign.agent.name }}</a> · База: <a href="/lists/{{ campaign.contact_list.id }}">{{ campaign.contact_list.name }}</a></div>
+      <div class="muted">Окно: {{ campaign.start_hour }}:00–{{ campaign.end_hour }}:00, {% for d in campaign.days_of_week %}{{ weekdays[d] }}{% if not loop.last %}, {% endif %}{% endfor %} ({{ campaign.timezone }}); параллельно: {{ campaign.max_concurrent }}</div>
+    </div>
+    <div style="text-align:right">
+      {% if campaign.status.value in ("draft", "paused", "completed") %}<form class="inline" method="post" action="/campaigns/{{ campaign.id }}/start"><button class="btn">▶ Запустить</button></form>{% endif %}
+      {% if campaign.status.value == "running" %}<form class="inline" method="post" action="/campaigns/{{ campaign.id }}/pause"><button class="btn secondary">⏸ Пауза</button></form>{% endif %}
+      {% if campaign.status.value in ("running", "paused") %}<form class="inline" method="post" action="/campaigns/{{ campaign.id }}/stop" onsubmit="return confirm('Остановить кампанию и сбросить активные звонки?')"><button class="btn danger">■ Стоп</button></form>{% endif %}
+    </div>
+  </div>
+  <div style="margin-top:12px"><div class="progress"><div style="width:{{ counts.progress_pct }}%"></div></div>
+  <span class="muted">{{ counts.progress_pct }}%: done {{ counts.done }}, failed {{ counts.failed }}, do_not_call {{ counts.do_not_call }}, calling {{ counts.calling }}, new {{ counts.new }} из {{ counts.total }}</span></div>
+</div>
+<div class="grid">
+  <div class="stat"><div class="v">{{ stats.total }}</div><div class="l">звонков</div></div>
+  <div class="stat"><div class="v">{{ stats.answered }}</div><div class="l">разговоров</div></div>
+  <div class="stat"><div class="v">{{ stats.conversion_pct }}%</div><div class="l">конверсия в цель</div></div>
+  <div class="stat"><div class="v">{{ stats.meetings }}</div><div class="l">встреч</div></div>
+  <div class="stat"><div class="v">{{ stats.avg_duration_seconds|duration }}</div><div class="l">средняя длительность</div></div>
+  <div class="stat"><div class="v">{{ stats.total_minutes }}</div><div class="l">минут телефонии</div></div>
+  <div class="stat"><div class="v">{{ stats.unreached }}</div><div class="l">недозвонов</div></div>
+</div>
+
+<h2>Назначенные встречи</h2>
+{% if meetings %}
+<table>
+  <tr><th>Когда</th><th>Прямой контакт</th><th>Звонили на</th><th>Комментарий</th><th>Звонок</th></tr>
+  {% for m in meetings %}
+  <tr><td>{{ m.scheduled_at|dt }}</td>
+      <td>{% if m.call.direct_phone %}{{ m.call.direct_phone }}{% if m.call.messenger %}, {{ m.call.messenger }}{% endif %}{% else %}<span class="muted">не получен</span>{% endif %}</td>
+      <td class="muted">{{ m.call.phone }}</td><td>{{ m.comment }}</td><td><a href="/calls/{{ m.call_id }}">#{{ m.call_id }}</a></td></tr>
+  {% endfor %}
+</table>
+{% else %}<p class="muted">Встреч пока нет.</p>{% endif %}
+
+<h2>Звонки</h2>
+{% include "_calls_table.html" %}
+{% endblock %}

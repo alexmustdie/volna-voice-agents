@@ -1,0 +1,26 @@
+<!doctype html>
+<html lang="ru">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>{% block title %}Volna{% endblock %}</title>
+<link rel="stylesheet" href="/static/style.css">
+</head>
+<body>
+<header>
+  <a class="brand" href="/">VOLNA</a>
+  <nav>
+    <a href="/">Дашборд</a>
+    <a href="/agents">Агенты</a>
+    <a href="/lists">Базы номеров</a>
+    <a href="/campaigns">Кампании</a>
+    <a href="/inbound">Входящие</a>
+    <a href="/test">Тест в браузере</a>
+  </nav>
+  {% if settings.fake_calls %}<span class="mode fake">МОК-РЕЖИМ: звонки симулируются</span>{% else %}<span class="mode">LIVE: {{ settings.live_model }} / {{ settings.backend_model }}</span>{% endif %}
+</header>
+<main>
+{% block content %}{% endblock %}
+</main>
+</body>
+</html>

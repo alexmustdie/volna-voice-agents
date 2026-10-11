@@ -1,0 +1,29 @@
+{% extends "base.html" %}
+{% block title %}База {{ list.name }} – Volna{% endblock %}
+{% block content %}
+<h1>База: {{ list.name }}</h1>
+{% if flash %}<div class="flash">{{ flash }}</div>{% endif %}
+<div class="grid">
+  <div class="stat"><div class="v">{{ counts.total }}</div><div class="l">контактов</div></div>
+  <div class="stat"><div class="v">{{ counts.new }}</div><div class="l">new</div></div>
+  <div class="stat"><div class="v">{{ counts.calling }}</div><div class="l">calling</div></div>
+  <div class="stat"><div class="v">{{ counts.done }}</div><div class="l">done</div></div>
+  <div class="stat"><div class="v">{{ counts.failed }}</div><div class="l">failed</div></div>
+  <div class="stat"><div class="v">{{ counts.do_not_call }}</div><div class="l">do_not_call</div></div>
+</div>
+<form class="card" method="post" action="/lists/{{ list.id }}/upload" enctype="multipart/form-data">
+  <label>Догрузить CSV (phone обязателен; name, district, metro, budget, rooms необязательны)</label><input type="file" name="file" required accept=".csv,text/csv">
+  <button class="btn" style="margin-top:12px">Загрузить</button>
+</form>
+{% if contacts %}
+<table>
+  <tr><th>Телефон</th><th>Имя</th><th>Район</th><th>Метро</th><th>Бюджет</th><th>Комнат</th><th>Статус</th><th>Попыток</th><th>Следующая попытка</th></tr>
+  {% for c in contacts %}
+  <tr><td>{{ c.phone }}</td><td>{{ c.name or "" }}</td><td>{{ c.district or "" }}</td><td>{{ c.metro or "" }}</td>
+      <td>{% if c.budget %}{{ "{:,}".format(c.budget).replace(",", " ") }}{% endif %}</td>
+      <td>{% if c.rooms is not none %}{{ "студия" if c.rooms == 0 else c.rooms }}{% endif %}</td>
+      <td><span class="badge {{ c.status.value }}">{{ c.status.value }}</span></td><td>{{ c.attempts }}</td><td class="muted">{{ c.next_attempt_at|dt }}</td></tr>
+  {% endfor %}
+</table>
+{% else %}<p class="muted">Контактов пока нет.</p>{% endif %}
+{% endblock %}

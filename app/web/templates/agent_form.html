@@ -1,0 +1,42 @@
+{% extends "base.html" %}
+{% block title %}{{ "Агент " ~ agent.name if agent else "Новый агент" }} – Volna{% endblock %}
+{% block content %}
+<h1>{{ "Агент: " ~ agent.name if agent else "Новый агент" }}</h1>
+<form class="card" method="post" action="{{ '/agents/' ~ agent.id if agent else '/agents' }}">
+  <div class="row3">
+    <div><label>Имя агента</label><input type="text" name="name" required value="{{ agent.name if agent else '' }}"></div>
+    <div><label>Пол персоны</label>
+      <select name="gender">
+        <option value="female" {% if agent and agent.gender.value == 'female' %}selected{% endif %}>женский</option>
+        <option value="male" {% if agent and agent.gender.value == 'male' %}selected{% endif %}>мужской</option>
+      </select></div>
+    <div><label>Примерный возраст</label><input type="number" name="age" min="18" max="90" value="{{ agent.age if agent else 30 }}"></div>
+  </div>
+  <div class="row">
+    <div><label>Голос</label>
+      <select name="voice">
+        {% for engine, voices in voices_by_engine.items() %}
+        <optgroup label="{{ engine_labels.get(engine, engine) }}">
+          {% for v in voices %}<option value="{{ v }}" {% if agent and agent.voice == v %}selected{% endif %}>{{ v }} – {{ voice_note(v) }}</option>{% endfor %}
+        </optgroup>
+        {% endfor %}
+      </select>
+      <div class="muted">Голос определяет движок агента: у OpenAI и Яндекса голоса свои. Пол голосов OpenAI измерен по основному тону образцов, у Яндекса взят из документации.</div>
+      {% if agent and voice_mismatch(agent.gender.value, agent.voice) %}<div class="badge do_not_call">пол персоны и голоса расходятся: {{ voice_note(agent.voice) }}</div>{% endif %}
+      <div class="muted"><a href="/test/voices" target="_blank">Послушать образцы всех голосов</a>; соответствие голоса полу персоны проверьте на слух.</div></div>
+    <div><label>Ниша / сфера</label><input type="text" name="niche" placeholder="недвижимость" value="{{ agent.niche if agent else '' }}"></div>
+  </div>
+  <label>Описание компании, от лица которой звонит</label>
+  <textarea name="company_description" placeholder="Агентство недвижимости 'Дом', 10 лет на рынке, работаем с новостройками Москвы">{{ agent.company_description if agent else '' }}</textarea>
+  <label>Цель звонка</label>
+  <textarea name="call_goal" placeholder="Договориться о встрече в офисе или онлайн-показе">{{ agent.call_goal if agent else '' }}</textarea>
+  <label>Обязательные вопросы (по одному в строке)</label>
+  <textarea name="required_questions" placeholder="Рассматриваете ли покупку квартиры в ближайшие полгода?&#10;Какой бюджет?">{{ agent.required_questions|join('\n') if agent else '' }}</textarea>
+  <label>Дополнительные инструкции (тон, ограничения, работа с возражениями)</label>
+  <textarea name="extra_instructions">{{ agent.extra_instructions if agent else '' }}</textarea>
+  <p class="muted">В системный промпт автоматически добавляется: говорить только по-русски, вежливо завершать разговор по просьбе не звонить и помечать номер как "не беспокоить", фиксировать встречи через book_meeting.</p>
+  <button class="btn">Сохранить</button>
+  <a class="btn secondary" href="/agents">Отмена</a>
+  {% if agent %}<a class="btn secondary" href="/agents/{{ agent.id }}/prompt" target="_blank">Посмотреть промпт</a>{% endif %}
+</form>
+{% endblock %}

@@ -1,0 +1,11 @@
+.venv/
+__pycache__/
+*.pyc
+.env
+*.db
+*.log
+.pytest_cache/
+.ruff_cache/
+.mypy_cache/
+app/web/static/voices/*.wav
+leads_test.csv

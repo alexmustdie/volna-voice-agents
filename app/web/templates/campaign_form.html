@@ -1,0 +1,28 @@
+{% extends "base.html" %}
+{% block title %}Новая кампания – Volna{% endblock %}
+{% block content %}
+<h1>Новая кампания</h1>
+{% if not agents or not lists %}
+<div class="card">Сначала создайте {% if not agents %}<a href="/agents/new">агента</a>{% endif %}{% if not agents and not lists %} и {% endif %}{% if not lists %}<a href="/lists">базу номеров</a>{% endif %}.</div>
+{% else %}
+<form class="card" method="post" action="/campaigns">
+  <label>Название</label><input type="text" name="name" required>
+  <div class="row">
+    <div><label>Агент</label><select name="agent_id">{% for a in agents %}<option value="{{ a.id }}">{{ a.name }} ({{ a.niche }})</option>{% endfor %}</select></div>
+    <div><label>База номеров</label><select name="list_id">{% for l in lists %}<option value="{{ l.id }}">{{ l.name }}</option>{% endfor %}</select></div>
+  </div>
+  <div class="row3">
+    <div><label>Таймзона</label><input type="text" name="timezone" value="Europe/Moscow"></div>
+    <div><label>Звонить с (час)</label><input type="number" name="start_hour" min="0" max="23" value="10"></div>
+    <div><label>до (час, не включая)</label><input type="number" name="end_hour" min="1" max="24" value="19"></div>
+  </div>
+  <label>Дни недели</label>
+  <div class="checks">
+    {% for d in weekdays %}<label><input type="checkbox" name="days_of_week" value="{{ loop.index0 }}" {% if loop.index0 < 5 %}checked{% endif %}> {{ d }}</label>{% endfor %}
+  </div>
+  <label>Лимит одновременных звонков (1–20)</label><input type="number" name="max_concurrent" min="1" max="20" value="3">
+  <p class="muted">Кампания создаётся в статусе draft; запуск на странице кампании. Недозвон: до {{ settings.max_retries }} повторов с интервалом {{ settings.retry_interval_seconds // 60 }} мин.</p>
+  <button class="btn" style="margin-top:12px">Создать</button>
+</form>
+{% endif %}
+{% endblock %}

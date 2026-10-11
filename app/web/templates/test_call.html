@@ -1,0 +1,94 @@
+{% extends "base.html" %}
+{% block title %}Тестовый звонок – Volna{% endblock %}
+{% block content %}
+<h1>Тестовый звонок из браузера <a class="btn small secondary" style="float:right" href="/test/voices">образцы голосов</a></h1>
+<div class="card">
+  <p class="muted">Движок и голос берутся из агента. OpenAI GPT-Live-1 стоит около $0.05/мин плюс бэкенд-модель,
+  Яндекс Realtime около 2,8 ₽/мин. Если для движка агента нет ключей, разговор симулируется. Телефония не используется:
+  вы говорите в микрофон, агент отвечает в динамики.</p>
+  {% if agents %}
+  <div class="row3">
+    <div><label>Агент</label><select id="agent">{% for a in agents %}<option value="{{ a.id }}" data-token="{{ tokens[a.id] }}">{{ a.name }}, {{ a.voice }}, {{ engine_labels.get(a.engine, a.engine) }}{% if not real[a.id] %}, мок{% endif %}</option>{% endfor %}</select></div>
+    <div><label>Сценарий</label><select id="direction"><option value="outbound">исходящий: агент звонит вам</option><option value="inbound">входящий: вы звоните агенту</option></select></div>
+    <div><label>Ваше имя (как в базе)</label><input type="text" id="name" placeholder="Иван"></div>
+  </div>
+  <p style="margin-top:12px">
+    <button class="btn" id="start">🎤 Начать разговор</button>
+    <button class="btn danger" id="stop" disabled>■ Положить трубку</button>
+    <span id="status" class="muted" style="margin-left:12px">готов</span>
+  </p>
+  {% else %}<p>Сначала создайте <a href="/agents/new">агента</a>.</p>{% endif %}
+</div>
+<div class="row">
+  <div class="card"><h2 style="margin-top:0">Транскрипт</h2><div class="transcript" id="transcript"></div></div>
+  <div class="card"><h2 style="margin-top:0">Инструменты и события</h2><pre id="events" style="min-height:120px"></pre></div>
+</div>
+<script>
+const RATE = 24000, CHUNK = 2400; // 100 мс
+let ws, ctx, mic, worklet, playTime = 0, current = null, timer, t0;
+const $ = id => document.getElementById(id);
+const log = m => { $('events').textContent += m + "\n"; };
+const workletCode = `
+class PcmCapture extends AudioWorkletProcessor {
+  constructor(){ super(); this.buf = new Int16Array(${CHUNK}); this.n = 0; }
+  process(inputs){
+    const ch = inputs[0][0]; if (!ch) return true;
+    for (let i = 0; i < ch.length; i++) {
+      const s = Math.max(-1, Math.min(1, ch[i]));
+      this.buf[this.n++] = s < 0 ? s * 0x8000 : s * 0x7FFF;
+      if (this.n === this.buf.length) { this.port.postMessage(this.buf); this.buf = new Int16Array(${CHUNK}); this.n = 0; }
+    }
+    return true;
+  }
+}
+registerProcessor('pcm-capture', PcmCapture);`;
+function b64(int16){ let s=''; const u8=new Uint8Array(int16.buffer); for (let i=0;i<u8.length;i++) s+=String.fromCharCode(u8[i]); return btoa(s); }
+function play(b64s){
+  const bin = atob(b64s); const u8 = new Uint8Array(bin.length); for (let i=0;i<bin.length;i++) u8[i]=bin.charCodeAt(i);
+  const i16 = new Int16Array(u8.buffer, 0, Math.floor(u8.length/2)); if (!i16.length) return;
+  const buf = ctx.createBuffer(1, i16.length, RATE); const f32 = buf.getChannelData(0);
+  for (let i=0;i<i16.length;i++) f32[i] = i16[i]/32768;
+  const src = ctx.createBufferSource(); src.buffer = buf; src.connect(ctx.destination);
+  // если очередь пуста (пауза или начало реплики), даём 250 мс запаса на сетевой джиттер, иначе стыкуем встык
+  if (playTime < ctx.currentTime + 0.02) playTime = ctx.currentTime + 0.25;
+  src.start(playTime); playTime += buf.duration;
+}
+function addTranscript(role, delta){
+  if (!current || current.role !== role) { const d = document.createElement('div'); d.className = 'msg ' + role; d.innerHTML = '<div class="who">' + (role==='agent'?'Агент':'Вы') + '</div><span></span>'; $('transcript').appendChild(d); current = {role, el: d.querySelector('span')}; }
+  current.el.textContent += delta; $('transcript').scrollTop = 1e9;
+}
+async function start(){
+  $('start').disabled = true; $('stop').disabled = false; $('transcript').innerHTML=''; $('events').textContent=''; current=null;
+  ctx = new AudioContext({sampleRate: RATE});
+  mic = null;
+  try { mic = await navigator.mediaDevices.getUserMedia({audio: {channelCount:1, echoCancellation:true, noiseSuppression:true}}); }
+  catch(e){ log('микрофон недоступен (' + e.message + '), агент вас не услышит'); }
+  if (mic) {
+    await ctx.audioWorklet.addModule(URL.createObjectURL(new Blob([workletCode], {type:'application/javascript'})));
+    const src = ctx.createMediaStreamSource(mic); worklet = new AudioWorkletNode(ctx, 'pcm-capture'); src.connect(worklet);
+  }
+  // токен сокета выдаёт страница (app.security.media_token), без него сервер закрывает сокет кодом 1008
+  const q = new URLSearchParams({agent_id: $('agent').value, direction: $('direction').value, name: $('name').value, token: $('agent').selectedOptions[0].dataset.token});
+  ws = new WebSocket((location.protocol==='https:'?'wss://':'ws://') + location.host + '/test/call?' + q);
+  ws.onopen = () => { $('status').textContent = 'соединение...'; if (worklet) worklet.port.onmessage = e => { if (ws.readyState===1) ws.send(JSON.stringify({type:'audio', data: b64(e.data)})); }; };
+  ws.onmessage = e => {
+    const m = JSON.parse(e.data);
+    if (m.type === 'audio') play(m.data);
+    else if (m.type === 'transcript') addTranscript(m.role, m.delta);
+    else if (m.type === 'tool') log('🔧 ' + m.name + ' ' + JSON.stringify(m.arguments) + ' → ' + JSON.stringify(m.output));
+    else if (m.type === 'started') { $('status').textContent = 'идёт разговор'; t0 = Date.now(); timer = setInterval(()=>{ $('status').textContent = 'идёт разговор, ' + Math.round((Date.now()-t0)/1000) + ' с'; }, 1000); log('сессия ' + (m.session_id||'')); }
+    else if (m.type === 'call') log('звонок #' + m.call_id + (m.real ? ' (реальная модель)' : ' (мок)'));
+    else if (m.type === 'usage') log('usage: ' + m.seconds + ' с');
+    else if (m.type === 'closed') log('сессия закрыта: ' + m.reason);
+    else if (m.type === 'error') log('ошибка: ' + m.message);
+    else if (m.type === 'hangup') log('звонок завершён');
+    else if (m.type === 'interrupted') { playTime = 0; log('клиент перебил, очередь воспроизведения сброшена'); }
+    else if (m.type === 'finished') { log('результаты: /calls/' + m.call_id); $('status').innerHTML = 'завершён, <a href="/calls/' + m.call_id + '">открыть результаты</a>'; }
+  };
+  ws.onclose = () => cleanup();
+}
+function stop(){ if (ws && ws.readyState===1) ws.send(JSON.stringify({type:'stop'})); }
+function cleanup(){ clearInterval(timer); if (mic) mic.getTracks().forEach(t=>t.stop()); if (ctx) ctx.close(); $('start').disabled=false; $('stop').disabled=true; }
+$('start').onclick = start; $('stop').onclick = stop;
+</script>
+{% endblock %}

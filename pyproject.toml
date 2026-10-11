@@ -1,0 +1,21 @@
+[project]
+name = "volna"
+version = "0.1.0"
+description = "Voice AI agents platform: outbound and inbound phone calls in Russian (FastAPI, async SQLAlchemy, Alembic, Twilio Media Streams)"
+requires-python = ">=3.12"
+# Зависимости живут в requirements.txt и requirements-dev.txt, здесь не дублируются.
+
+[tool.ruff]
+line-length = 100
+target-version = "py312"
+extend-exclude = [".venv", "alembic/versions"]
+
+[tool.ruff.lint]
+select = ["E", "F", "I", "UP", "B"]
+# UP042 (StrEnum) меняет str()/format() у enum-ов моделей, которые уходят в шаблоны и БД;
+# переход на StrEnum это отдельная правка поведения, а не стиля.
+ignore = ["UP042"]
+
+[tool.mypy]
+python_version = "3.12"
+ignore_missing_imports = true

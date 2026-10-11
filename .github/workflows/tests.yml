@@ -1,0 +1,63 @@
+name: tests
+
+on:
+  push:
+  pull_request:
+
+jobs:
+  lint:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-python@v5
+        with:
+          python-version: "3.12"
+          cache: pip
+      - run: pip install -r requirements.txt -r requirements-dev.txt
+      - run: ruff check .
+      - run: ruff format --check .
+
+  sqlite:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-python@v5
+        with:
+          python-version: "3.12"
+          cache: pip
+      - run: pip install -r requirements.txt -r requirements-dev.txt
+      - run: pytest -q
+
+  postgres:
+    runs-on: ubuntu-latest
+    services:
+      postgres:
+        image: postgres:16
+        env:
+          POSTGRES_USER: volna
+          POSTGRES_PASSWORD: volna
+          POSTGRES_DB: volna_test
+        ports:
+          - 5432:5432
+        options: >-
+          --health-cmd "pg_isready -U volna -d volna_test"
+          --health-interval 5s
+          --health-timeout 3s
+          --health-retries 10
+    env:
+      # alembic (env.py) берёт DATABASE_URL из настроек приложения, тесты смотрят на TEST_DATABASE_URL
+      DATABASE_URL: postgresql+asyncpg://volna:volna@localhost:5432/volna_test
+      TEST_DATABASE_URL: postgresql+asyncpg://volna:volna@localhost:5432/volna_test
+      SESSION_SECRET: ci-only-session-secret-0123456789
+      FAKE_CALLS: "true"
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-python@v5
+        with:
+          python-version: "3.12"
+          cache: pip
+      - run: pip install -r requirements.txt -r requirements-dev.txt
+      - run: alembic upgrade head
+      # модели и миграции не разошлись: autogenerate не находит отличий
+      - run: alembic check
+      - run: pytest -q

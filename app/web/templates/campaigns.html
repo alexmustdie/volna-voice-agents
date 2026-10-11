@@ -1,0 +1,21 @@
+{% extends "base.html" %}
+{% block title %}Кампании – Volna{% endblock %}
+{% block content %}
+<h1>Кампании <a class="btn" style="float:right" href="/campaigns/new">+ Новая кампания</a></h1>
+{% if campaigns %}
+<table>
+  <tr><th>Кампания</th><th>Агент</th><th>База</th><th>Статус</th><th>Прогресс</th><th>Окно</th><th>Параллельно</th></tr>
+  {% for c in campaigns %}{% set p = progress[c.id] %}
+  <tr>
+    <td><a href="/campaigns/{{ c.id }}">{{ c.name }}</a></td>
+    <td>{{ c.agent.name }}</td>
+    <td>{{ c.contact_list.name }}</td>
+    <td><span class="badge {{ c.status.value }}">{{ c.status.value }}</span></td>
+    <td style="min-width:160px"><div class="progress"><div style="width:{{ p.progress_pct }}%"></div></div><span class="muted">{{ p.progress_pct }}% ({{ p.done + p.failed + p.do_not_call }}/{{ p.total }})</span></td>
+    <td class="muted">{{ c.start_hour }}:00–{{ c.end_hour }}:00, {% for d in c.days_of_week %}{{ weekdays[d] }}{% if not loop.last %},{% endif %}{% endfor %}, {{ c.timezone }}</td>
+    <td>{{ c.max_concurrent }}</td>
+  </tr>
+  {% endfor %}
+</table>
+{% else %}<p class="muted">Кампаний пока нет.</p>{% endif %}
+{% endblock %}

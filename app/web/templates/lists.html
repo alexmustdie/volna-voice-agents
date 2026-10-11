@@ -1,0 +1,24 @@
+{% extends "base.html" %}
+{% block title %}Базы номеров – Volna{% endblock %}
+{% block content %}
+<h1>Базы номеров</h1>
+<form class="card" method="post" action="/lists" enctype="multipart/form-data">
+  <div class="row">
+    <div><label>Название базы</label><input type="text" name="name" required placeholder="Лиды сентябрь"></div>
+    <div><label>CSV: обязательна колонка phone, остальные необязательны: name, district, metro, budget, rooms (разделитель , или ;)</label><input type="file" name="file" accept=".csv,text/csv"></div>
+  </div>
+  <button class="btn" style="margin-top:12px">Создать и загрузить</button>
+</form>
+{% if lists %}
+<table>
+  <tr><th>База</th><th>Контактов</th><th>new</th><th>calling</th><th>done</th><th>failed</th><th>do_not_call</th><th></th></tr>
+  {% for l in lists %}{% set c = counts[l.id] %}
+  <tr>
+    <td><a href="/lists/{{ l.id }}">{{ l.name }}</a></td>
+    <td>{{ c.total }}</td><td>{{ c.new }}</td><td>{{ c.calling }}</td><td>{{ c.done }}</td><td>{{ c.failed }}</td><td>{{ c.do_not_call }}</td>
+    <td><form class="inline" method="post" action="/lists/{{ l.id }}/delete" onsubmit="return confirm('Удалить базу?')"><button class="btn small danger">удалить</button></form></td>
+  </tr>
+  {% endfor %}
+</table>
+{% else %}<p class="muted">Баз пока нет.</p>{% endif %}
+{% endblock %}

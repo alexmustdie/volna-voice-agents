@@ -1,0 +1,34 @@
+# Локальный запуск: своя база в контейнере, порт наружу, внешний сервис офферов не нужен (OFFERS_URL пуст).
+name: volna-local
+
+services:
+  postgres:
+    image: postgres:16-alpine
+    environment:
+      POSTGRES_USER: ${POSTGRES_USER:-volna}
+      POSTGRES_PASSWORD: ${POSTGRES_PASSWORD:-volna}
+      POSTGRES_DB: ${POSTGRES_DB:-volna}
+    volumes:
+      - pgdata:/var/lib/postgresql/data
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U ${POSTGRES_USER:-volna} -d ${POSTGRES_DB:-volna}"]
+      interval: 5s
+      timeout: 3s
+      retries: 10
+    ports:
+      - "5432:5432"
+
+  app:
+    build: .
+    env_file: .env
+    environment:
+      DATABASE_URL: postgresql+asyncpg://${POSTGRES_USER:-volna}:${POSTGRES_PASSWORD:-volna}@postgres:5432/${POSTGRES_DB:-volna}
+    ports:
+      - "8000:8000"
+    depends_on:
+      postgres:
+        condition: service_healthy
+    restart: unless-stopped
+
+volumes:
+  pgdata:
